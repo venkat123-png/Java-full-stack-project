@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - Pet Adoption Management System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <span class="brand-icon">🐾</span>
+                <span>Pet Adoption System</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html"><i class="bi bi-house-door"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="adopted.html"><i class="bi bi-heart-fill text-danger"></i> Adopted Pets</a>
+                    </li>
+                    <li class="nav-item" id="nav-dashboard-link">
+                        <a class="nav-link active" href="dashboard.html"><i class="bi bi-journal-text"></i> My Applications</a>
+                    </li>
+                    <li class="nav-item" id="nav-admin-link" style="display: none;">
+                        <a class="nav-link" href="admin.html"><i class="bi bi-shield-lock-fill text-warning"></i> Admin Portal</a>
+                    </li>
+                </ul>
+                <div id="nav-auth-container"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header Section -->
+    <section class="bg-primary text-white py-4 mb-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="fw-bold mb-1" id="user-greeting">My Adopter Dashboard</h2>
+                    <p class="mb-0 opacity-75">Track the status of your pet adoption applications in real-time.</p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="index.html" class="btn btn-warning text-dark fw-bold">
+                        <i class="bi bi-search"></i> Find More Pets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <main class="container my-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0">Submitted Adoption Requests</h4>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadMyApplications()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+
+        <div id="applications-container">
+            <!-- Dynamic application list -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="no-applications" class="card border-0 shadow-sm p-5 text-center d-none">
+            <div class="fs-1 text-muted mb-3">📋</div>
+            <h5 class="fw-bold">No Adoption Applications Yet</h5>
+            <p class="text-muted">You haven't submitted any adoption requests. Browse through our available pets and find your new companion!</p>
+            <div>
+                <a href="index.html" class="btn btn-primary px-4 py-2">
+                    <i class="bi bi-heart-fill"></i> Browse Available Pets
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p class="small text-secondary mb-0">Pet Adoption Management System &copy; 2026</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('user-greeting').innerText = `Welcome, ${user.fullName}`;
+            loadMyApplications();
+        });
+
+        async function loadMyApplications() {
+            const user = Auth.getUser();
+            const container = document.getElementById('applications-container');
+            const emptyState = document.getElementById('no-applications');
+
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading your requests...</p>
+                </div>
+            `;
+
+            try {
+                const requests = await Api.getMyAdoptionRequests(user.id);
+                
+                if (!requests || requests.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.classList.remove('d-none');
+                    return;
+                }
+
+                emptyState.classList.add('d-none');
+
+                container.innerHTML = requests.map(req => {
+                    let statusBadge = 'bg-warning text-dark';
+                    let statusIcon = 'bi-hourglass-split';
+                    let statusNote = 'Your application has been received and is currently under review by the shelter team.';
+
+                    if (req.status === 'APPROVED') {
+                        statusBadge = 'bg-success';
+                        statusIcon = 'bi-check-circle-fill';
+                        statusNote = 'Congratulations! Your adoption application has been approved! The shelter will contact you with pickup and final paperwork instructions.';
+                    } else if (req.status === 'REJECTED') {
+                        statusBadge = 'bg-danger';
+                        statusIcon = 'bi-x-circle-fill';
+                        statusNote = 'Unfortunately, this application was not approved. Thank you for your interest and support for rescued animals.';
+                    }
+
+                    const reqDate = req.requestDate ? new Date(req.requestDate).toLocaleDateString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    }) : 'Recently';
+
+                    return `
+                        <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+                            <div class="card-body p-4">
+                                <div class="row g-4 align-items-center">
+                                    <div class="col-md-3">
+                                        <img src="${req.pet.imageUrl || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80'}" 
+                                             class="img-fluid rounded-3 w-100 shadow-sm" style="height: 180px; object-fit: cover;">
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                            <div>
+                                                <h4 class="fw-bold mb-1">${req.pet.name} <span class="badge bg-light text-dark border fs-6">${req.pet.species}</span></h4>
+                                                <p class="text-muted small mb-0"><i class="bi bi-geo-alt-fill text-danger"></i> ${req.pet.location || 'Shelter'} • Submitted: ${reqDate}</p>
+                                            </div>
+                                            <span class="badge ${statusBadge} px-3 py-2 fs-6 rounded-pill">
+                                                <i class="bi ${statusIcon}"></i> ${req.status}
+                                            </span>
+                                        </div>
+
+                                        <div class="bg-light p-3 rounded-3 mb-3">
+                                            <p class="mb-1 small"><strong>Status Update:</strong> ${statusNote}</p>
+                                            ${req.adminNotes ? `<p class="mb-0 small text-primary"><strong>Shelter Notes:</strong> ${req.adminNotes}</p>` : ''}
+                                        </div>
+
+                                        <div class="row g-2 small text-muted">
+                                            <div class="col-sm-6">
+                                                <strong>Home Environment:</strong> ${req.homeType || 'Not specified'}
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <strong>Other Pets:</strong> ${req.hasOtherPets ? 'Yes' : 'No'}
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <strong>Your Note:</strong> "${req.reason || 'None'}"
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">Error loading applications: ${err.message}</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

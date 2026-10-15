@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - Pet Adoption Management System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <span class="brand-icon">🐾</span>
+                <span>Pet Adoption Admin</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <a href="index.html" class="btn btn-outline-light btn-sm"><i class="bi bi-eye"></i> View Public Site</a>
+                <button class="btn btn-danger btn-sm" onclick="Auth.logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Admin Header -->
+    <header class="bg-white border-bottom py-3 mb-4">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h3 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-lock-fill text-warning"></i> Shelter Administration</h3>
+                <p class="text-muted small mb-0">Manage pet listings and review adoption applications.</p>
+            </div>
+            <div>
+                <button class="btn btn-success fw-bold" onclick="openAddPetModal()">
+                    <i class="bi bi-plus-circle-fill"></i> Add New Pet Record
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container with Tabs -->
+    <main class="container mb-5">
+        <ul class="nav nav-tabs fw-bold mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests-pane">
+                    <i class="bi bi-file-earmark-check-fill text-primary"></i> Adoption Requests
+                    <span id="requests-badge-count" class="badge bg-danger rounded-pill ms-1">0</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="pets-tab" data-bs-toggle="tab" data-bs-target="#pets-pane">
+                    <i class="bi bi-collection-fill text-success"></i> Manage Pets
+                    <span id="pets-badge-count" class="badge bg-secondary rounded-pill ms-1">0</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TAB 1: ADOPTION REQUESTS -->
+            <div class="tab-pane fade show active" id="requests-pane">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">Adoption Applications Queue</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadRequests()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Requests
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Pet</th>
+                                    <th>Adopter Details</th>
+                                    <th>Home Info & Reason</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requests-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">Loading requests...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: MANAGE PETS -->
+            <div class="tab-pane fade" id="pets-pane">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">All Pet Records</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadPetsAdmin()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh Pets
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Species & Breed</th>
+                                    <th>Age & Gender</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pets-table-body">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">Loading pets...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add / Edit Pet Modal -->
+    <div class="modal fade" id="petFormModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="pet-crud-form">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title fw-bold" id="petModalTitle">Add New Pet</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="pet-id">
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Pet Name *</label>
+                                <input type="text" id="pet-name" class="form-control" required placeholder="e.g. Max, Bella">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Species *</label>
+                                <select id="pet-species" class="form-select" required>
+                                    <option value="Dog">Dog</option>
+                                    <option value="Cat">Cat</option>
+                                    <option value="Rabbit">Rabbit</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Gender</label>
+                                <select id="pet-gender" class="form-select">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Breed</label>
+                                <input type="text" id="pet-breed" class="form-control" placeholder="e.g. Golden Retriever, Labrador">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Age (Months)</label>
+                                <input type="number" id="pet-age" class="form-control" min="1" placeholder="e.g. 18">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Status</label>
+                                <select id="pet-status" class="form-select">
+                                    <option value="AVAILABLE">AVAILABLE</option>
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="ADOPTED">ADOPTED</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Health / Vaccination Status</label>
+                                <input type="text" id="pet-health" class="form-control" placeholder="e.g. Vaccinated, Dewormed, Spayed">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Shelter Location</label>
+                                <input type="text" id="pet-location" class="form-control" placeholder="e.g. Downtown Shelter">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Photo Image URL</label>
+                                <input type="url" id="pet-image" class="form-control" placeholder="https://images.unsplash.com/...">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Description / Story</label>
+                                <textarea id="pet-description" class="form-control" rows="3" placeholder="Temperament, behavior with other pets and kids..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success fw-bold" id="save-pet-btn">Save Pet Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Decision Modal -->
+    <div class="modal fade" id="reviewDecisionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="decision-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="decisionModalTitle">Review Application</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="decision-request-id">
+                        <input type="hidden" id="decision-action">
+
+                        <p id="decision-prompt" class="mb-3"></p>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Shelter Admin Note / Feedback</label>
+                            <textarea id="decision-notes" class="form-control" rows="3" placeholder="Add guidance, schedule inspection, pickup instructions or reason for rejection..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn fw-bold" id="decision-confirm-btn">Confirm Decision</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS & Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let petModal = null;
+        let decisionModal = null;
+        let allPets = [];
+        let allRequests = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (!user || user.role !== 'ADMIN') {
+                alert('Access restricted to administrators only. Redirecting to login.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            petModal = new bootstrap.Modal(document.getElementById('petFormModal'));
+            decisionModal = new bootstrap.Modal(document.getElementById('reviewDecisionModal'));
+
+            document.getElementById('pet-crud-form').addEventListener('submit', handleSavePet);
+            document.getElementById('decision-form').addEventListener('submit', handleConfirmDecision);
+
+            loadRequests();
+            loadPetsAdmin();
+        });
+
+        // ------------------ REQUESTS MANAGEMENT ------------------
+        async function loadRequests() {
+            try {
+                allRequests = await Api.getAllAdoptionRequests();
+                const pendingCount = allRequests.filter(r => r.status === 'PENDING').length;
+                document.getElementById('requests-badge-count').innerText = pendingCount;
+
+                const tbody = document.getElementById('requests-table-body');
+                if (!allRequests || allRequests.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No adoption requests found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = allRequests.map(req => {
+                    let badgeClass = 'bg-warning text-dark';
+                    if (req.status === 'APPROVED') badgeClass = 'bg-success';
+                    if (req.status === 'REJECTED') badgeClass = 'bg-danger';
+
+                    return `
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">#${req.id}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="${req.pet.imageUrl || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80'}" 
+                                         class="rounded" style="width: 45px; height: 45px; object-fit: cover;">
+                                    <div>
+                                        <div class="fw-bold">${req.pet.name}</div>
+                                        <div class="small text-muted">${req.pet.species} • ${req.pet.breed || ''}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">${req.adopterName}</div>
+                                <div class="small text-muted"><i class="bi bi-envelope"></i> ${req.adopterEmail}</div>
+                                <div class="small text-muted"><i class="bi bi-telephone"></i> ${req.adopterPhone}</div>
+                            </td>
+                            <td style="max-width: 250px;">
+                                <div class="small"><strong>Home:</strong> ${req.homeType || 'N/A'} (Other pets: ${req.hasOtherPets ? 'Yes' : 'No'})</div>
+                                <div class="small text-truncate" title="${req.reason || ''}"><strong>Reason:</strong> ${req.reason || 'None provided'}</div>
+                            </td>
+                            <td><span class="badge ${badgeClass} px-2 py-1">${req.status}</span></td>
+                            <td>
+                                ${req.status === 'PENDING' ? `
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success" title="Approve" onclick="promptDecision(${req.id}, 'APPROVED', '${req.adopterName}', '${req.pet.name}')">
+                                            <i class="bi bi-check-lg"></i> Approve
+                                        </button>
+                                        <button class="btn btn-outline-danger" title="Reject" onclick="promptDecision(${req.id}, 'REJECTED', '${req.adopterName}', '${req.pet.name}')">
+                                            <i class="bi bi-x-lg"></i> Reject
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <span class="text-muted small">Reviewed</span>
+                                `}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                showToast('Failed to load requests: ' + err.message, 'danger');
+            }
+        }
+
+        function promptDecision(requestId, status, adopterName, petName) {
+            document.getElementById('decision-request-id').value = requestId;
+            document.getElementById('decision-action').value = status;
+            document.getElementById('decisionModalTitle').innerText = status === 'APPROVED' ? 'Approve Adoption Request' : 'Reject Adoption Request';
+            document.getElementById('decision-prompt').innerHTML = `
+                Are you sure you want to <strong>${status}</strong> the adoption request from <strong>${adopterName}</strong> for <strong>${petName}</strong>?
+                ${status === 'APPROVED' ? '<br><small class="text-success fw-bold">✓ This will immediately mark the pet as ADOPTED in the system.</small>' : ''}
+            `;
+
+            const confirmBtn = document.getElementById('decision-confirm-btn');
+            confirmBtn.className = status === 'APPROVED' ? 'btn btn-success fw-bold' : 'btn btn-danger fw-bold';
+            confirmBtn.innerText = status === 'APPROVED' ? 'Confirm Approval' : 'Confirm Rejection';
+
+            document.getElementById('decision-notes').value = '';
+            decisionModal.show();
+        }
+
+        async function handleConfirmDecision(e) {
+            e.preventDefault();
+            const requestId = document.getElementById('decision-request-id').value;
+            const status = document.getElementById('decision-action').value;
+            const notes = document.getElementById('decision-notes').value.trim();
+
+            try {
+                await Api.updateRequestStatus(requestId, status, notes);
+                decisionModal.hide();
+                showToast(`Request #${requestId} has been marked as ${status}!`, 'success');
+                loadRequests();
+                loadPetsAdmin();
+            } catch (err) {
+                showToast('Action failed: ' + err.message, 'danger');
+            }
+        }
+
+        // ------------------ PETS CRUD MANAGEMENT ------------------
+        async function loadPetsAdmin() {
+            try {
+                allPets = await Api.getAllPets();
+                document.getElementById('pets-badge-count').innerText = allPets.length;
+
+                const tbody = document.getElementById('pets-table-body');
+                if (!allPets || allPets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No pets available.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = allPets.map(pet => {
+                    let badgeClass = 'bg-success';
+                    if (pet.status === 'PENDING') badgeClass = 'bg-warning text-dark';
+                    if (pet.status === 'ADOPTED') badgeClass = 'bg-primary';
+
+                    return `
+                        <tr>
+                            <td>
+                                <img src="${pet.imageUrl || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80'}" 
+                                     class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                            </td>
+                            <td class="fw-bold">${pet.name}</td>
+                            <td>${pet.species} <span class="text-muted small">(${pet.breed || 'Mixed'})</span></td>
+                            <td>${pet.ageMonths ? pet.ageMonths + ' mos' : 'N/A'} • ${pet.gender || 'N/A'}</td>
+                            <td>${pet.location || 'Shelter'}</td>
+                            <td><span class="badge ${badgeClass}">${pet.status}</span></td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="openEditPetModal(${pet.id})" title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deletePetRecord(${pet.id}, '${pet.name}')" title="Delete">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                showToast('Failed to load pets: ' + err.message, 'danger');
+            }
+        }
+
+        function openAddPetModal() {
+            document.getElementById('petModalTitle').innerText = 'Add New Pet Record';
+            document.getElementById('pet-crud-form').reset();
+            document.getElementById('pet-id').value = '';
+            document.getElementById('pet-status').value = 'AVAILABLE';
+            petModal.show();
+        }
+
+        function openEditPetModal(id) {
+            const pet = allPets.find(p => p.id === id);
+            if (!pet) return;
+
+            document.getElementById('petModalTitle').innerText = `Edit ${pet.name}'s Record`;
+            document.getElementById('pet-id').value = pet.id;
+            document.getElementById('pet-name').value = pet.name;
+            document.getElementById('pet-species').value = pet.species;
+            document.getElementById('pet-breed').value = pet.breed || '';
+            document.getElementById('pet-gender').value = pet.gender || 'Male';
+            document.getElementById('pet-age').value = pet.ageMonths || '';
+            document.getElementById('pet-status').value = pet.status;
+            document.getElementById('pet-health').value = pet.healthStatus || '';
+            document.getElementById('pet-location').value = pet.location || '';
+            document.getElementById('pet-image').value = pet.imageUrl || '';
+            document.getElementById('pet-description').value = pet.description || '';
+
+            petModal.show();
+        }
+
+        async function handleSavePet(e) {
+            e.preventDefault();
+            const id = document.getElementById('pet-id').value;
+            const petData = {
+                name: document.getElementById('pet-name').value.trim(),
+                species: document.getElementById('pet-species').value,
+                breed: document.getElementById('pet-breed').value.trim(),
+                gender: document.getElementById('pet-gender').value,
+                ageMonths: parseInt(document.getElementById('pet-age').value) || null,
+                status: document.getElementById('pet-status').value,
+                healthStatus: document.getElementById('pet-health').value.trim(),
+                location: document.getElementById('pet-location').value.trim(),
+                imageUrl: document.getElementById('pet-image').value.trim(),
+                description: document.getElementById('pet-description').value.trim()
+            };
+
+            try {
+                if (id) {
+                    await Api.updatePet(id, petData);
+                    showToast('Pet record updated successfully!', 'success');
+                } else {
+                    await Api.createPet(petData);
+                    showToast('New pet added to shelter records!', 'success');
+                }
+                petModal.hide();
+                loadPetsAdmin();
+            } catch (err) {
+                showToast('Failed to save pet: ' + err.message, 'danger');
+            }
+        }
+
+        async function deletePetRecord(id, name) {
+            if (!confirm(`Are you sure you want to delete ${name}'s record from the system?`)) return;
+
+            try {
+                await Api.deletePet(id);
+                showToast(`Pet "${name}" deleted successfully`, 'success');
+                loadPetsAdmin();
+            } catch (err) {
+                showToast('Delete failed: ' + err.message, 'danger');
+            }
+        }
+    </script>
+</body>
+</html>
